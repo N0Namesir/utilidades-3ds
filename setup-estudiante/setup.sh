@@ -148,6 +148,10 @@ run_module() {
     [[ -f "$file" ]] || err "Módulo no encontrado: $file"
     # shellcheck source=/dev/null
     source "$file"
+    # Convertir guiones a underscores para el nombre de la función pública.
+    local func="setup_${mod//-/_}"
+    declare -f "$func" >/dev/null || err "Módulo '$mod' no define $func()"
+    "$func"
 }
 
 # --- Módulos en orden ---

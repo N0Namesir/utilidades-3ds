@@ -1,4 +1,34 @@
 #!/usr/bin/env bash
-# lib/wordpress.sh — STUB (pendiente migración en pasos siguientes)
-# Este archivo será completado en el paso 2.
-warn "Módulo 'wordpress' todavía no implementado (stub)."
+# lib/wordpress.sh — Descarga de WordPress + permisos en /var/www/html.
+# (La base de datos 'wordpress' se crea en lib/mariadb.sh.)
+
+WORDPRESS_DIR="/var/www/html/wordpress"
+
+_wordpress_download() {
+    step "WordPress"
+    if [[ -d "$WORDPRESS_DIR" ]]; then
+        warn "WordPress ya existe en $WORDPRESS_DIR, omitiendo descarga"
+        return 0
+    fi
+    wget -qO /tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz
+    tar -xzf /tmp/wordpress.tar.gz -C /var/www/html/
+    rm -f /tmp/wordpress.tar.gz
+    chown -R "$REAL_USER":www-data "$WORDPRESS_DIR"
+    chmod -R 775 "$WORDPRESS_DIR"
+    ok "WordPress descargado → http://localhost/wordpress"
+}
+
+_wordpress_webroot_perms() {
+    info "Configurando permisos en /var/www/html para $REAL_USER..."
+    backup_webroot
+    usermod -aG www-data "$REAL_USER"
+    chown -R "$REAL_USER":www-data /var/www/html
+    chmod -R 775 /var/www/html
+    ok "Permisos configurados (grupo www-data)"
+}
+
+setup_wordpress() {
+    run_step "wordpress-download"     _wordpress_download
+    run_step "wordpress-webroot-perm" _wordpress_webroot_perms
+}
+
