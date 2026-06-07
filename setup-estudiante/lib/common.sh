@@ -37,6 +37,34 @@ mark_done() {
     touch "$STATE_DIR/$1.done"
 }
 
+# ---------------------------------------------------------------------------
+# INVARIANTE DE DISEÑO — leer antes de escribir nuevas funciones _<modulo>_<paso>
+#
+# La granularidad de reintento es el STEP, no el módulo.
+# Si un step falla a mitad, el re-run lo vuelve a ejecutar COMPLETO desde
+# el principio (no desde donde cortó). Por eso toda función _<modulo>_<paso>
+# debe ser IDEMPOTENTE: ejecutarla dos veces sobre el mismo sistema debe
+# producir el mismo resultado que ejecutarla una.
+#
+# Patrones seguros:
+#   apt install -y         → no-op si ya instalado
+#   CREATE … IF NOT EXISTS → no-op si ya existe
+#   ALTER USER … BY '…'   → no-op si la pass ya es esa (misma $VAR, persistida)
+#   systemctl enable/start → no-op si ya activo
+#   ln -sf                 → sobreescribe el symlink, siempre idempotente
+#   a2enmod / a2enconf     → no-op si ya habilitado
+#   mkdir -p               → no-op si ya existe
+#
+# Patrones a evitar sin guardia:
+#   ALTER USER sin IF EXISTS (rompe si el usuario no existe todavía)
+#   rm -rf sin chequeo (destruye estado previo en re-run)
+#   wget sin verificar si el destino ya existe
+#   adduser / useradd sin --if-not-exists o chequeo previo
+#
+# El marker .done solo se crea si la función retorna exit 0.
+# Si retorna ≠ 0, err() aborta antes de mark_done → el re-run reintenta.
+# ---------------------------------------------------------------------------
+
 # Ejecuta una función-paso sólo si todavía no está marcada como completada.
 # Uso: run_step <nombre_marcador> <nombre_funcion> [args...]
 run_step() {
