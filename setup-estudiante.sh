@@ -110,7 +110,7 @@ systemctl start mariadb
 ok "MariaDB instalado"
 
 info "Asegurando MariaDB..."
-mysql -u root << EOF
+sudo mysql << EOF
 ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
@@ -219,6 +219,7 @@ fi
 info "Creando base de datos para WordPress..."
 mysql -u root -p"${MARIADB_ROOT_PASSWORD}" << EOF
 CREATE DATABASE IF NOT EXISTS wordpress CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${REAL_USER}'@'localhost' IDENTIFIED BY '${REAL_USER}';
 GRANT ALL PRIVILEGES ON wordpress.* TO '${REAL_USER}'@'localhost';
 FLUSH PRIVILEGES;
 EOF
