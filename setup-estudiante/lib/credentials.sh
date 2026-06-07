@@ -10,22 +10,23 @@ CRED_FILE="$REAL_HOME/credenciales-instalacion.txt"
 _credentials_write() {
     step "Archivo de credenciales"
 
-    # Sección opcional de SQL Server: solo si el estudiante levantó alguna
-    # vez sqlserver-up.sh, MSSQL_SA_PASSWORD está en passwords.env (lo
-    # exporta el caller setup.sh al sourcearlo).
-    local mssql_section=""
+    # Sección de componentes opcionales (siempre visible para descubribilidad).
+    # Si MSSQL_SA_PASSWORD ya existe, agrega la línea con el password.
+    local mssql_pass_line=""
     if [[ -n "${MSSQL_SA_PASSWORD:-}" ]]; then
-        mssql_section="
-── SQL Server (Podman) ──────────────────────────────────────────────────────
-  Host            : localhost
-  Puerto          : 1433
-  Usuario         : sa
-  Password        : ${MSSQL_SA_PASSWORD}
-  Levantar        : sudo bash setup-estudiante/scripts/sqlserver-up.sh
-  Detener         : sudo bash setup-estudiante/scripts/sqlserver-down.sh
-  Purgar          : sudo bash setup-estudiante/scripts/sqlserver-down.sh --purge
-"
+        mssql_pass_line="  Password sa     : ${MSSQL_SA_PASSWORD}"
+    else
+        mssql_pass_line="  Password sa     : (se genera la primera vez que corrás sqlserver-up.sh)"
     fi
+    local optional_section="
+── Componentes opcionales ──────────────────────────────────────────────────
+  SQL Server 2022 Express (Podman, levantar a demanda):
+${mssql_pass_line}
+    Levantar : sudo bash setup-estudiante/scripts/sqlserver-up.sh
+    Detener  : sudo bash setup-estudiante/scripts/sqlserver-down.sh
+    Purgar   : sudo bash setup-estudiante/scripts/sqlserver-down.sh --purge
+  (al levantar SQL Server se detienen Apache+MariaDB para liberar RAM)
+"
 
     cat > "$CRED_FILE" << EOF
 # =============================================================================
@@ -65,7 +66,7 @@ _credentials_write() {
 ── Adminer ───────────────────────────────────────────────────────────────────
   URL             : http://localhost/adminer.php
   (usa las mismas credenciales de MariaDB)
-${mssql_section}
+${optional_section}
 
 ── Accesos rápidos ───────────────────────────────────────────────────────────
   Apache          : http://localhost

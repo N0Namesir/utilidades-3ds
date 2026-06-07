@@ -75,10 +75,18 @@ footer{border-top:1px solid var(--border);padding:16px 32px;font-family:'IBM Ple
       <span class="link-icon">🗄️</span>
       <div class="link-text"><div class="link-title">phpMyAdmin</div><div class="link-url">localhost/phpmyadmin</div></div>
     </a>
+    <a class="link-card" href="/adminer.php" target="_blank">
+      <span class="link-icon">⚡</span>
+      <div class="link-text"><div class="link-title">Adminer</div><div class="link-url">localhost/adminer.php</div></div>
+    </a>
     <a class="link-card" href="/wordpress" target="_blank">
       <span class="link-icon">🌐</span>
       <div class="link-text"><div class="link-title">WordPress</div><div class="link-url">localhost/wordpress</div></div>
     </a>
+    <div class="link-card" title="Levantar a demanda con: sudo bash setup-estudiante/scripts/sqlserver-up.sh" style="cursor:help">
+      <span class="link-icon">🧊</span>
+      <div class="link-text"><div class="link-title">SQL Server (opcional)</div><div class="link-url">scripts/sqlserver-up.sh</div></div>
+    </div>
     <a class="link-card" href="https://github.com" target="_blank">
       <span class="link-icon">🐙</span>
       <div class="link-text"><div class="link-title">GitHub</div><div class="link-url">github.com</div></div>
