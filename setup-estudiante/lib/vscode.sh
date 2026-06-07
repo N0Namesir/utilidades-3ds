@@ -21,8 +21,28 @@ _vscode_install() {
     ok "VS Code instalado"
 }
 
+_vscode_extensions() {
+    info "Instalando extensiones de VS Code para $REAL_USER..."
+    # `code --install-extension` es idempotente: dice "already installed"
+    # y retorna 0 si la extensión ya está. Se corre como REAL_USER para que
+    # las extensiones queden en ~/.vscode/extensions del usuario, no de root.
+    local extensions=(
+        bmewburn.vscode-intelephense-client
+        esbenp.prettier-vscode
+        dbaeumer.vscode-eslint
+        eamodio.gitlens
+        ritwickdey.LiveServer
+        usernamehw.errorlens
+    )
+    for ext in "${extensions[@]}"; do
+        sudo -u "$REAL_USER" code --install-extension "$ext" --force
+    done
+    ok "Extensiones VS Code instaladas (${#extensions[@]})"
+}
+
 setup_vscode() {
-    run_step "vscode-repo"    _vscode_repo
-    run_step "vscode-install" _vscode_install
+    run_step "vscode-repo"       _vscode_repo
+    run_step "vscode-install"    _vscode_install
+    run_step "vscode-extensions" _vscode_extensions
 }
 

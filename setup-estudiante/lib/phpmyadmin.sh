@@ -14,7 +14,17 @@ _phpmyadmin_install() {
     ok "phpMyAdmin instalado → http://localhost/phpmyadmin"
 }
 
+_phpmyadmin_adminer() {
+    info "Descargando Adminer..."
+    # `wget -O` sobreescribe el destino; idempotente por construcción.
+    wget -qO /var/www/html/adminer.php https://www.adminer.org/latest.php
+    chown "$REAL_USER:www-data" /var/www/html/adminer.php
+    chmod 644 /var/www/html/adminer.php
+    ok "Adminer instalado → http://localhost/adminer.php"
+}
+
 setup_phpmyadmin() {
     run_step "phpmyadmin-install" _phpmyadmin_install
+    run_step "phpmyadmin-adminer" _phpmyadmin_adminer
 }
 
