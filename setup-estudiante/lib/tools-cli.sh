@@ -91,6 +91,17 @@ _tools_fd_bat_symlinks() {
     ok "Symlinks creados (fd, bat)"
 }
 
+_tools_mkcert_install() {
+    # mkcert -install registra el CA local en el trust store del sistema y
+    # en NSS (Firefox/Chrome). Sin este paso los certificados son válidos
+    # pero los navegadores los marcan como no confiables.
+    # Se corre como REAL_USER: mkcert gestiona internamente la parte que
+    # requiere permisos elevados. Idempotente: si ya está instalado, sale 0.
+    info "Registrando CA local de mkcert..."
+    sudo -u "$REAL_USER" mkcert -install
+    ok "CA de mkcert instalado en el trust store"
+}
+
 # ---------------------------------------------------------------------------
 # GitHub CLI (repo oficial)
 # ---------------------------------------------------------------------------
@@ -123,6 +134,7 @@ setup_tools_cli() {
     run_step "tools-cli-composer"     _tools_composer
     run_step "tools-cli-recommended"  _tools_recommended
     run_step "tools-cli-fd-bat-syms"  _tools_fd_bat_symlinks
+    run_step "tools-cli-mkcert"       _tools_mkcert_install
     run_step "tools-cli-gh"           _tools_gh
     run_step "tools-cli-fonts"        _tools_fonts
 }
