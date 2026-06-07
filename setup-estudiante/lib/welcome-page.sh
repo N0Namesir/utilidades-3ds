@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # lib/welcome-page.sh — Página de bienvenida local (/var/www/html/index.php).
-# NOTA: index.php todavía contiene la password root hardcodeada del v1.
-# Eso se corrige en el paso 3 (bugs críticos) — junto con Adminer y earlyoom.
 
 _welcome_install() {
     step "Página de bienvenida"
@@ -13,11 +11,11 @@ _welcome_install() {
 $phpVersion  = phpversion();
 $nodeVersion = trim(shell_exec('node -v 2>/dev/null') ?: 'no disponible');
 $gitVersion  = trim(shell_exec('git --version 2>/dev/null') ?: 'no disponible');
-$mysqlStatus = 'inactivo';
-try {
-  new PDO('mysql:host=localhost', 'root', 'rootpass');
-  $mysqlStatus = 'activo';
-} catch (Exception $e) {}
+// Fix bug #1: no usar credenciales root hardcodeadas en una página servida
+// públicamente. systemctl is-active no requiere password y refleja el
+// estado real del daemon.
+$mysqlStatus = (trim(shell_exec('systemctl is-active mariadb 2>/dev/null') ?: '') === 'active')
+    ? 'activo' : 'inactivo';
 ?>
 <!DOCTYPE html>
 <html lang="es">

@@ -19,7 +19,8 @@ _tools_micro() {
     tar -xzf "$MICRO_TMP/micro.tar.gz" -C "$MICRO_TMP"
     install -m 755 "$MICRO_TMP/micro-${MICRO_VERSION}/micro" /usr/local/bin/micro
     rm -rf "$MICRO_TMP"
-    ok "Micro $(micro --version) instalado en /usr/local/bin/micro"
+    # Fix bug #5: `micro --version` imprime varias líneas (version, commit, build date).
+    ok "Micro $(micro --version | head -n1) instalado en /usr/local/bin/micro"
 }
 
 setup_tools_cli() {

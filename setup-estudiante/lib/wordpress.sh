@@ -18,6 +18,22 @@ _wordpress_download() {
     ok "WordPress descargado → http://localhost/wordpress"
 }
 
+_wordpress_apache_override() {
+    # Fix bug #3: sin AllowOverride All los permalinks de WordPress
+    # devuelven 404 aunque mod_rewrite esté habilitado. El .htaccess
+    # de WP necesita poder reescribir reglas.
+    info "Configurando AllowOverride para WordPress..."
+    cat > /etc/apache2/conf-available/wordpress-overrides.conf << 'CONF'
+<Directory /var/www/html/wordpress>
+    AllowOverride All
+    Require all granted
+</Directory>
+CONF
+    a2enconf wordpress-overrides
+    systemctl reload apache2
+    ok "AllowOverride habilitado para /var/www/html/wordpress"
+}
+
 _wordpress_webroot_perms() {
     info "Configurando permisos en /var/www/html para $REAL_USER..."
     backup_webroot
@@ -28,7 +44,8 @@ _wordpress_webroot_perms() {
 }
 
 setup_wordpress() {
-    run_step "wordpress-download"     _wordpress_download
-    run_step "wordpress-webroot-perm" _wordpress_webroot_perms
+    run_step "wordpress-download"        _wordpress_download
+    run_step "wordpress-apache-override" _wordpress_apache_override
+    run_step "wordpress-webroot-perm"    _wordpress_webroot_perms
 }
 

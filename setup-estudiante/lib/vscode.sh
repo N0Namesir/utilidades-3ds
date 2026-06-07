@@ -3,6 +3,9 @@
 
 _vscode_repo() {
     step "Repositorio VS Code"
+    # Fix bug #2: el directorio /etc/apt/keyrings no siempre existe en
+    # instalaciones frescas de Lubuntu 24.04.
+    mkdir -p /etc/apt/keyrings
     wget -qO- https://packages.microsoft.com/keys/microsoft.asc \
         | gpg --dearmor > /etc/apt/keyrings/microsoft.gpg
     chmod a+r /etc/apt/keyrings/microsoft.gpg
