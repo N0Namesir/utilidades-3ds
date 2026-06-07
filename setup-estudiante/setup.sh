@@ -18,10 +18,18 @@ LIB_DIR="$SCRIPT_DIR/lib"
 source "$LIB_DIR/common.sh"
 
 # ---------------------------------------------------------------------------
-# Logging: todo stdout/stderr va al log Y a la terminal
+# Logging: todo stdout/stderr va al log Y a la terminal.
+# CRÍTICO: el log puede contener fragmentos sensibles (paths a passwords.env,
+# mensajes de error de SQL con la pass en el comando, etc.) y en el paso 4
+# se sumará el cat del archivo de credenciales. Por eso forzamos modo 600
+# root:root ANTES del exec, para que ninguna línea posterior pueda quedar
+# en un archivo mundo-legible.
 # ---------------------------------------------------------------------------
 LOG_FILE="/var/log/setup-estudiante.log"
 mkdir -p "$(dirname "$LOG_FILE")"
+touch "$LOG_FILE"
+chown root:root "$LOG_FILE"
+chmod 600 "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 # ---------------------------------------------------------------------------
