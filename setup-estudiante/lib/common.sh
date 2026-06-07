@@ -151,7 +151,9 @@ backup_webroot() {
         return 0
     fi
 
-    local backup_file="$backup_dir/setup-estudiante-${today}_$(date +%H%M%S).tar.gz"
+    local backup_file ts
+    ts=$(date +%H%M%S)
+    backup_file="$backup_dir/setup-estudiante-${today}_${ts}.tar.gz"
     info "Creando backup de /var/www/html → $backup_file"
     if [[ -d /var/www/html ]]; then
         tar -czf "$backup_file" -C /var/www html 2>/dev/null || \

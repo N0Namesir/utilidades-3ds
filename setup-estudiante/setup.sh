@@ -13,6 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="$SCRIPT_DIR/lib"
 
+# LIB_DIR se resuelve en runtime via realpath del script; shellcheck no puede seguirlo.
+# shellcheck disable=SC1091
 source "$LIB_DIR/common.sh"
 
 # ---------------------------------------------------------------------------
@@ -102,6 +104,7 @@ echo ""
 # Modo --verify (doctor)
 # ---------------------------------------------------------------------------
 if [[ "$FLAG_VERIFY" == true ]]; then
+    # shellcheck disable=SC1091
     source "$LIB_DIR/verify.sh"
     run_verify
     exit $?
