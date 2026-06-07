@@ -27,3 +27,11 @@ setup_system() {
     run_step "system-base-pkg" _system_base_packages
 }
 
+verify_system() {
+    verify_check "curl en PATH"  "command -v curl"  "sudo apt install curl"
+    verify_check "wget en PATH"  "command -v wget"  "sudo apt install wget"
+    verify_check "git en PATH"   "command -v git"   "sudo apt install git"
+    verify_check "unzip en PATH" "command -v unzip" "sudo apt install unzip"
+    verify_check "gnupg en PATH" "command -v gpg"   "sudo apt install gnupg"
+}
+

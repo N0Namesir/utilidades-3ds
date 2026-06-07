@@ -79,3 +79,22 @@ setup_tuning() {
     run_step "tuning-apache-dismods" _tuning_apache_disable_mods
     run_step "tuning-earlyoom"       _tuning_earlyoom
 }
+
+verify_tuning() {
+    verify_check "zramswap activo" "systemctl is-active --quiet zramswap" \
+        "sudo systemctl enable --now zramswap"
+    verify_check "MariaDB low-ram drop-in" \
+        "[[ -f /etc/mysql/mariadb.conf.d/99-low-ram.cnf ]]" \
+        "sudo bash setup.sh --only=tuning"
+    verify_check "earlyoom activo" "systemctl is-active --quiet earlyoom" \
+        "sudo systemctl enable --now earlyoom"
+    verify_check "Apache: mod autoindex deshabilitado" \
+        "! apache2ctl -M 2>/dev/null | grep -q autoindex_module" \
+        "sudo a2dismod -q autoindex && sudo systemctl restart apache2"
+    verify_check "Apache: mod cgi deshabilitado" \
+        "! apache2ctl -M 2>/dev/null | grep -q '^ cgi_module'" \
+        "sudo a2dismod -q cgi && sudo systemctl restart apache2"
+    verify_check "Apache: mod status deshabilitado" \
+        "! apache2ctl -M 2>/dev/null | grep -q status_module" \
+        "sudo a2dismod -q status && sudo systemctl restart apache2"
+}

@@ -157,3 +157,24 @@ setup_credentials() {
     run_step "credentials-gitignore"  _credentials_gitignore
     run_step "credentials-git-config" _credentials_git_config
 }
+
+verify_credentials() {
+    verify_check "archivo de credenciales existe" \
+        "[[ -f '$CRED_FILE' ]]" \
+        "sudo bash setup.sh --only=credentials"
+    verify_check "credenciales son 600" \
+        "[[ \$(stat -c '%a' '$CRED_FILE' 2>/dev/null) == '600' ]]" \
+        "sudo chmod 600 '$CRED_FILE'"
+    verify_check "credenciales pertenecen a $REAL_USER" \
+        "[[ \$(stat -c '%U' '$CRED_FILE' 2>/dev/null) == '$REAL_USER' ]]" \
+        "sudo chown $REAL_USER:$REAL_USER '$CRED_FILE'"
+    verify_check_warn ".gitignore_global incluye credenciales-instalacion.txt" \
+        "grep -qxF 'credenciales-instalacion.txt' '$REAL_HOME/.gitignore_global'" \
+        "sudo bash setup.sh --only=credentials"
+    verify_check_warn "git user.name configurado" \
+        "sudo -u '$REAL_USER' git config --global user.name" \
+        "git config --global user.name 'Tu Nombre'"
+    verify_check_warn "git user.email configurado" \
+        "sudo -u '$REAL_USER' git config --global user.email" \
+        "git config --global user.email 'tu@email.com'"
+}

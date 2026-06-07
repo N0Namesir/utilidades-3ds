@@ -14,8 +14,8 @@ $gitVersion  = trim(shell_exec('git --version 2>/dev/null') ?: 'no disponible');
 // Fix bug #1: no usar credenciales root hardcodeadas en una página servida
 // públicamente. systemctl is-active no requiere password y refleja el
 // estado real del daemon.
-$mysqlStatus = (trim(shell_exec('systemctl is-active mariadb 2>/dev/null') ?: '') === 'active')
-    ? 'activo' : 'inactivo';
+$mysqlStatus    = (trim(shell_exec('systemctl is-active mariadb 2>/dev/null')  ?: '') === 'active') ? 'activo' : 'inactivo';
+$earlyoomStatus = (trim(shell_exec('systemctl is-active earlyoom 2>/dev/null') ?: '') === 'active') ? 'activo' : 'inactivo';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -67,6 +67,7 @@ footer{border-top:1px solid var(--border);padding:16px 32px;font-family:'IBM Ple
     <div class="card"><div class="card-label">Node.js</div><div class="card-value green"><?= $nodeVersion ?></div></div>
     <div class="card"><div class="card-label">Git</div><div class="card-value warn"><?= htmlspecialchars($gitVersion) ?></div></div>
     <div class="card"><div class="card-label">MariaDB</div><div class="card-value <?= $mysqlStatus === 'activo' ? 'green' : 'warn' ?>"><?= $mysqlStatus ?></div></div>
+    <div class="card"><div class="card-label">earlyoom</div><div class="card-value <?= $earlyoomStatus === 'activo' ? 'green' : 'warn' ?>"><?= $earlyoomStatus ?></div></div>
   </div>
 
   <div class="section-title">Accesos rápidos</div>
@@ -97,7 +98,7 @@ footer{border-top:1px solid var(--border);padding:16px 32px;font-family:'IBM Ple
     </a>
   </div>
 </main>
-<footer><?= date('Y') ?> — Apache activo · MariaDB <?= $mysqlStatus ?> · PHP <?= $phpVersion ?></footer>
+<footer><?= date('Y') ?> — Apache activo · MariaDB <?= $mysqlStatus ?> · PHP <?= $phpVersion ?> · <code>sudo bash setup.sh --verify</code> para diagnosticar</footer>
 </body>
 </html>
 PHPEOF
@@ -108,5 +109,17 @@ PHPEOF
 
 setup_welcome_page() {
     run_step "welcome-page-install" _welcome_install
+}
+
+verify_welcome_page() {
+    verify_check "/var/www/html/index.php existe" \
+        "[[ -f /var/www/html/index.php ]]" \
+        "sudo bash setup.sh --only=welcome-page"
+    verify_check "index.php usa systemctl is-active (no PDO con pass hardcodeada)" \
+        "grep -q 'systemctl is-active mariadb' /var/www/html/index.php" \
+        "sudo bash setup.sh --only=welcome-page"
+    verify_check "welcome page sirve HTTP 200 en /" \
+        "curl -fsS -o /dev/null http://localhost/" \
+        "sudo systemctl status apache2"
 }
 

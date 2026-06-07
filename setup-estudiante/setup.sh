@@ -38,12 +38,15 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 FLAG_VERIFY=false
 FLAG_SKIP_WORDPRESS=false
 ONLY_MODULES=""
-
+VERIFY_ONLY=""
+FLAG_VERBOSE=false
 FLAG_PURGE_STATE=false
 
 for arg in "$@"; do
     case "$arg" in
         --verify)           FLAG_VERIFY=true ;;
+        --verify=*)         FLAG_VERIFY=true; VERIFY_ONLY="${arg#--verify=}" ;;
+        --verbose)          FLAG_VERBOSE=true ;;
         --purge-state)      FLAG_PURGE_STATE=true ;;
         --skip-wordpress)   FLAG_SKIP_WORDPRESS=true ;;
         --only=*)           ONLY_MODULES="${arg#--only=}" ;;
@@ -52,7 +55,9 @@ for arg in "$@"; do
 Uso: sudo bash setup.sh [opciones]
 
 Opciones:
-  --verify              Modo doctor: chequea servicios y reporta estado.
+  --verify              Modo doctor: chequea TODOS los módulos.
+  --verify=mod1,mod2    Modo doctor filtrado por módulos.
+  --verbose             En --verify, imprime cada comando ejecutado.
   --purge-state         Borra /var/lib/setup-estudiante/ (markers + passwords).
   --skip-wordpress      Saltea la instalación de WordPress.
   --only=mod1,mod2      Ejecuta solo los módulos indicados (fuerza re-ejecución
@@ -114,7 +119,7 @@ echo ""
 if [[ "$FLAG_VERIFY" == true ]]; then
     # shellcheck disable=SC1091
     source "$LIB_DIR/verify.sh"
-    run_verify
+    run_verify "$VERIFY_ONLY" "$FLAG_VERBOSE"
     exit $?
 fi
 

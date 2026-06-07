@@ -49,3 +49,20 @@ setup_wordpress() {
     run_step "wordpress-webroot-perm"    _wordpress_webroot_perms
 }
 
+verify_wordpress() {
+    verify_check "directorio /var/www/html/wordpress" "[[ -d '$WORDPRESS_DIR' ]]" \
+        "sudo bash setup.sh --only=wordpress"
+    verify_check "wp-includes/version.php (WP descargado)" \
+        "[[ -f '$WORDPRESS_DIR/wp-includes/version.php' ]]" \
+        "sudo bash setup.sh --only=wordpress"
+    verify_check "WP responde HTTP 200" \
+        "curl -fsS -o /dev/null http://localhost/wordpress/" \
+        "sudo systemctl status apache2"
+    verify_check "AllowOverride habilitado (wordpress-overrides.conf)" \
+        "[[ -L /etc/apache2/conf-enabled/wordpress-overrides.conf ]]" \
+        "sudo a2enconf wordpress-overrides && sudo systemctl reload apache2"
+    verify_check_warn "user $REAL_USER en grupo www-data" \
+        "id -nG '$REAL_USER' | tr ' ' '\n' | grep -qx www-data" \
+        "sudo usermod -aG www-data $REAL_USER  (cerrar sesión para que aplique)"
+}
+

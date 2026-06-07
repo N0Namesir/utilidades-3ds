@@ -16,3 +16,9 @@ setup_chrome() {
     run_step "chrome-install" _chrome_install
 }
 
+verify_chrome() {
+    verify_check "google-chrome-unstable en PATH" \
+        "command -v google-chrome-unstable" \
+        "sudo bash setup.sh --only=chrome"
+}
+

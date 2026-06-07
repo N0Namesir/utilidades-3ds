@@ -46,3 +46,13 @@ setup_vscode() {
     run_step "vscode-extensions" _vscode_extensions
 }
 
+verify_vscode() {
+    verify_check "code en PATH" "command -v code" "sudo bash setup.sh --only=vscode"
+    verify_check_warn "extensión intelephense instalada" \
+        "sudo -u '$REAL_USER' code --list-extensions 2>/dev/null | grep -q bmewburn.vscode-intelephense-client" \
+        "sudo bash setup.sh --only=vscode"
+    verify_check_warn "extensión prettier instalada" \
+        "sudo -u '$REAL_USER' code --list-extensions 2>/dev/null | grep -q esbenp.prettier-vscode" \
+        "sudo bash setup.sh --only=vscode"
+}
+

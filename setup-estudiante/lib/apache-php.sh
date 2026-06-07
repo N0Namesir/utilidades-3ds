@@ -22,3 +22,14 @@ setup_apache_php() {
     run_step "apache-php-rewrite" _apache_rewrite
 }
 
+verify_apache_php() {
+    verify_check "apache2 activo"          "systemctl is-active --quiet apache2" \
+        "sudo systemctl restart apache2  &&  sudo journalctl -u apache2 -n 50"
+    verify_check "mod_rewrite habilitado"  "apache2ctl -M 2>/dev/null | grep -q rewrite_module" \
+        "sudo a2enmod rewrite && sudo systemctl restart apache2"
+    verify_check "php CLI funciona"        "php -r 'echo PHP_VERSION;'" \
+        "sudo apt install --reinstall php libapache2-mod-php"
+    verify_check "Apache responde HTTP 200 en /"  "curl -fsS -o /dev/null http://localhost/" \
+        "sudo systemctl status apache2"
+}
+

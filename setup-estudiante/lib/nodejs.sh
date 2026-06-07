@@ -54,3 +54,16 @@ setup_nodejs() {
     run_step "nodejs-globals"     _nodejs_globals
 }
 
+verify_nodejs() {
+    verify_check "node en PATH"  "command -v node" "sudo bash setup.sh --only=nodejs"
+    verify_check "node v22.x"    "node -v | grep -q '^v22'" \
+        "sudo bash setup.sh --only=nodejs  (versión actual: \$(node -v 2>/dev/null))"
+    verify_check "pnpm en PATH"  "command -v pnpm" "sudo bash setup.sh --only=nodejs"
+    verify_check ".npm-global existe para $REAL_USER" \
+        "[[ -d '$REAL_HOME/.npm-global' ]]" \
+        "sudo bash setup.sh --only=nodejs"
+    verify_check_warn "PATH del usuario incluye ~/.npm-global/bin" \
+        "grep -qF '.npm-global/bin' '$REAL_HOME/.profile'" \
+        "sudo bash setup.sh --only=nodejs"
+}
+

@@ -41,3 +41,20 @@ setup_mariadb() {
     run_step "mariadb-create-dbs" _mariadb_create_dbs
 }
 
+verify_mariadb() {
+    verify_check "mariadb activo" "systemctl is-active --quiet mariadb" \
+        "sudo systemctl restart mariadb  &&  sudo journalctl -u mariadb -n 50"
+
+    verify_check "root conecta con MARIADB_ROOT_PASSWORD" \
+        "mysql -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e 'SELECT 1' 2>/dev/null" \
+        "sudo bash setup.sh --only=mariadb"
+
+    verify_check "DB 'wordpress' existe" \
+        "mysql -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e 'USE wordpress' 2>/dev/null" \
+        "sudo bash setup.sh --only=mariadb"
+
+    verify_check "DB 'desarrollo' existe" \
+        "mysql -u root -p\"\$MARIADB_ROOT_PASSWORD\" -e 'USE desarrollo' 2>/dev/null" \
+        "sudo bash setup.sh --only=mariadb"
+}
+

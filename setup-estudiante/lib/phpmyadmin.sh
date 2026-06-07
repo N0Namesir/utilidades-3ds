@@ -28,3 +28,21 @@ setup_phpmyadmin() {
     run_step "phpmyadmin-adminer" _phpmyadmin_adminer
 }
 
+verify_phpmyadmin() {
+    verify_check "symlink /var/www/html/phpmyadmin" \
+        "[[ -L /var/www/html/phpmyadmin ]]" \
+        "sudo ln -sf /usr/share/phpmyadmin /var/www/html/phpmyadmin"
+
+    verify_check "phpMyAdmin responde HTTP 200" \
+        "curl -fsS -o /dev/null http://localhost/phpmyadmin/" \
+        "sudo bash setup.sh --only=phpmyadmin"
+
+    verify_check "/var/www/html/adminer.php existe" \
+        "[[ -f /var/www/html/adminer.php ]]" \
+        "sudo bash setup.sh --only=phpmyadmin"
+
+    verify_check "Adminer responde HTTP 200" \
+        "curl -fsS -o /dev/null http://localhost/adminer.php" \
+        "sudo bash setup.sh --only=phpmyadmin"
+}
+

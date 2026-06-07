@@ -138,3 +138,21 @@ setup_tools_cli() {
     run_step "tools-cli-gh"           _tools_gh
     run_step "tools-cli-fonts"        _tools_fonts
 }
+
+verify_tools_cli() {
+    local bins=(tilix micro composer jq tree ncdu rg fdfind batcat fzf tldr
+                mkcert http gh)
+    for bin in "${bins[@]}"; do
+        verify_check "$bin en PATH" "command -v $bin" \
+            "sudo bash setup.sh --only=tools-cli"
+    done
+    verify_check "symlink fd → fdfind"  "[[ -L /usr/local/bin/fd ]]"  \
+        "sudo bash setup.sh --only=tools-cli"
+    verify_check "symlink bat → batcat" "[[ -L /usr/local/bin/bat ]]" \
+        "sudo bash setup.sh --only=tools-cli"
+    verify_check "CA mkcert registrado" \
+        "[[ -f \"\$(sudo -u '$REAL_USER' mkcert -CAROOT 2>/dev/null)/rootCA.pem\" ]]" \
+        "sudo -u '$REAL_USER' mkcert -install"
+    verify_check_warn "fonts-firacode instalado" "dpkg -s fonts-firacode" \
+        "sudo apt install fonts-firacode"
+}

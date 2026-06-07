@@ -22,6 +22,50 @@ err()  { echo -e "${RED}[✗]${NC} $1" >&2; exit 1; }
 step() { echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
 
 # ---------------------------------------------------------------------------
+# Helpers para modo --verify (doctor). NO arreglan nada; solo diagnostican.
+# Usados por las funciones verify_<modulo>() en cada lib/*.sh.
+# ---------------------------------------------------------------------------
+VERIFY_FAIL_COUNT=${VERIFY_FAIL_COUNT:-0}
+VERIFY_WARN_COUNT=${VERIFY_WARN_COUNT:-0}
+VERIFY_VERBOSE=${VERIFY_VERBOSE:-false}
+
+check_ok()   { echo -e "${GREEN}[✓]${NC} $1"; }
+check_warn() {
+    echo -e "${YELLOW}[⚠]${NC} $1"
+    [[ -n "${2:-}" ]] && echo -e "    ${YELLOW}fix:${NC} $2"
+    VERIFY_WARN_COUNT=$((VERIFY_WARN_COUNT + 1))
+}
+check_fail() {
+    echo -e "${RED}[✗]${NC} $1"
+    [[ -n "${2:-}" ]] && echo -e "    ${RED}fix:${NC} $2"
+    VERIFY_FAIL_COUNT=$((VERIFY_FAIL_COUNT + 1))
+}
+
+# verify_check <descripcion> <comando> [fix_hint]
+# Ejecuta el comando; si retorna 0 → OK, si no → FAIL con fix.
+verify_check() {
+    local desc="$1" cmd="$2" fix="${3:-}"
+    [[ "$VERIFY_VERBOSE" == true ]] && echo -e "${BLUE}    \$ $cmd${NC}"
+    if eval "$cmd" &>/dev/null; then
+        check_ok "$desc"
+    else
+        check_fail "$desc" "$fix"
+    fi
+}
+
+# verify_check_warn — como verify_check pero usa WARN.
+# Para checks de cosas opcionales o subóptimas (no críticas).
+verify_check_warn() {
+    local desc="$1" cmd="$2" fix="${3:-}"
+    [[ "$VERIFY_VERBOSE" == true ]] && echo -e "${BLUE}    \$ $cmd${NC}"
+    if eval "$cmd" &>/dev/null; then
+        check_ok "$desc"
+    else
+        check_warn "$desc" "$fix"
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Directorio de marcadores de pasos completados
 # ---------------------------------------------------------------------------
 STATE_DIR="/var/lib/setup-estudiante"
