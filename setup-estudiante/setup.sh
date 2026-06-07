@@ -221,9 +221,14 @@ echo ""
 echo -e "${YELLOW}  Consejo:${NC} ejecutá  sudo bash setup.sh --verify  para diagnóstico"
 echo ""
 
-# Mostrar credenciales al final
+# Mostrar credenciales directo al TTY para que NO vayan al log.
+# El exec/tee redirige todo stdout/stderr; /dev/tty esquiva ese redirect
+# y escribe directamente al terminal del operador.
 if [[ -f "$REAL_HOME/credenciales-instalacion.txt" ]]; then
-    echo "━━━ CREDENCIALES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    cat "$REAL_HOME/credenciales-instalacion.txt"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    {
+        echo ""
+        echo "━━━ CREDENCIALES (no quedan en el log) ━━━━━━━━━"
+        cat "$REAL_HOME/credenciales-instalacion.txt"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    } > /dev/tty 2>/dev/null || warn "Sin TTY: credenciales guardadas en $REAL_HOME/credenciales-instalacion.txt"
 fi
