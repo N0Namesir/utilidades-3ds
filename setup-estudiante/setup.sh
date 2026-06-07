@@ -141,6 +141,10 @@ EOF
 fi
 
 export MARIADB_ROOT_PASSWORD PHPMYADMIN_PASSWORD USER_DB_PASSWORD
+# MSSQL_SA_PASSWORD solo existe si el estudiante levantó sqlserver-up.sh
+# alguna vez. Lo exportamos como cadena vacía si no, para que credentials.sh
+# pueda hacer ${MSSQL_SA_PASSWORD:-} sin romper bajo set -u.
+export MSSQL_SA_PASSWORD="${MSSQL_SA_PASSWORD:-}"
 
 # ---------------------------------------------------------------------------
 # Carga y ejecución de módulos

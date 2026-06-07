@@ -10,6 +10,23 @@ CRED_FILE="$REAL_HOME/credenciales-instalacion.txt"
 _credentials_write() {
     step "Archivo de credenciales"
 
+    # Sección opcional de SQL Server: solo si el estudiante levantó alguna
+    # vez sqlserver-up.sh, MSSQL_SA_PASSWORD está en passwords.env (lo
+    # exporta el caller setup.sh al sourcearlo).
+    local mssql_section=""
+    if [[ -n "${MSSQL_SA_PASSWORD:-}" ]]; then
+        mssql_section="
+── SQL Server (Podman) ──────────────────────────────────────────────────────
+  Host            : localhost
+  Puerto          : 1433
+  Usuario         : sa
+  Password        : ${MSSQL_SA_PASSWORD}
+  Levantar        : sudo bash setup-estudiante/scripts/sqlserver-up.sh
+  Detener         : sudo bash setup-estudiante/scripts/sqlserver-down.sh
+  Purgar          : sudo bash setup-estudiante/scripts/sqlserver-down.sh --purge
+"
+    fi
+
     cat > "$CRED_FILE" << EOF
 # =============================================================================
 #  CREDENCIALES DE INSTALACIÓN — ENTORNO DE DESARROLLO ESTUDIANTIL v2.0
@@ -48,6 +65,7 @@ _credentials_write() {
 ── Adminer ───────────────────────────────────────────────────────────────────
   URL             : http://localhost/adminer.php
   (usa las mismas credenciales de MariaDB)
+${mssql_section}
 
 ── Accesos rápidos ───────────────────────────────────────────────────────────
   Apache          : http://localhost
