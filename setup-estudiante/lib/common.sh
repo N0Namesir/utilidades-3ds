@@ -48,8 +48,19 @@ run_step() {
         return 0
     fi
 
-    "$func" "$@"
+    # Captura el exit code explícitamente para que el marker SOLO se cree
+    # si la función terminó con éxito, sin depender de set -e del caller.
+    local rc=0
+    "$func" "$@" || rc=$?
+    if [[ $rc -ne 0 ]]; then
+        err "Paso '$marker' falló (exit $rc). Re-ejecutá el script para reintentar."
+    fi
     mark_done "$marker"
+}
+
+# Borra el marker de un paso (forzar re-ejecución en próxima corrida).
+clear_marker() {
+    rm -f "$STATE_DIR/$1.done"
 }
 
 # ---------------------------------------------------------------------------
@@ -86,8 +97,21 @@ detect_real_user() {
 # ---------------------------------------------------------------------------
 
 # Genera un password aleatorio de 16 caracteres alfanuméricos.
+# Apto para MariaDB / phpMyAdmin / WordPress (no requieren clases de chars).
 gen_password() {
     openssl rand -base64 18 | tr -d '/+=' | cut -c1-16
+}
+
+# Genera un password "complejo" que satisface la política de SQL Server:
+# mayúscula + minúscula + dígito + símbolo, longitud >= 12.
+# Microsoft rechaza el contenedor mssql si no cumple esto.
+# Símbolos elegidos: seguros en shell y en cadenas de conexión (sin $`"'\).
+gen_password_complex() {
+    local base sym
+    base=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-14)
+    # Garantizamos las 4 clases prependiendo Aa1 y agregando un símbolo seguro.
+    sym=$(printf '%s' '!#%@_-' | fold -w1 | shuf -n1)
+    printf 'Aa1%s%s\n' "$sym" "$base"
 }
 
 # ---------------------------------------------------------------------------
@@ -116,11 +140,26 @@ run_sql() {
 # Backup defensivo de /var/www/html
 # ---------------------------------------------------------------------------
 backup_webroot() {
-    local backup_file="/var/backups/setup-estudiante-$(date +%F_%H%M%S).tar.gz"
+    local backup_dir="/var/backups"
+    local today; today=$(date +%F)
+    mkdir -p "$backup_dir"
+
+    # Si ya hay UN backup de hoy, no rehacer: ese captura el estado original
+    # del día. Backups múltiples sobreescribirían el "antes de tocar nada".
+    if compgen -G "$backup_dir/setup-estudiante-${today}*.tar.gz" >/dev/null; then
+        info "Backup de hoy ya existe en $backup_dir — preservando original."
+        return 0
+    fi
+
+    local backup_file="$backup_dir/setup-estudiante-${today}_$(date +%H%M%S).tar.gz"
     info "Creando backup de /var/www/html → $backup_file"
-    tar -czf "$backup_file" -C /var/www html 2>/dev/null || \
-        warn "Backup parcial (puede haber archivos bloqueados)."
-    ok "Backup guardado en $backup_file"
+    if [[ -d /var/www/html ]]; then
+        tar -czf "$backup_file" -C /var/www html 2>/dev/null || \
+            warn "Backup parcial (puede haber archivos bloqueados)."
+        ok "Backup guardado en $backup_file"
+    else
+        warn "/var/www/html no existe todavía — sin backup."
+    fi
 }
 
 # ---------------------------------------------------------------------------

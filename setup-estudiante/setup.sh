@@ -29,18 +29,40 @@ FLAG_VERIFY=false
 FLAG_SKIP_WORDPRESS=false
 ONLY_MODULES=""
 
+FLAG_PURGE_STATE=false
+
 for arg in "$@"; do
     case "$arg" in
         --verify)           FLAG_VERIFY=true ;;
+        --purge-state)      FLAG_PURGE_STATE=true ;;
         --skip-wordpress)   FLAG_SKIP_WORDPRESS=true ;;
         --only=*)           ONLY_MODULES="${arg#--only=}" ;;
         --help|-h)
-            echo "Uso: sudo bash setup.sh [--skip-wordpress] [--only=node,vscode] [--verify]"
+            cat << 'HELP'
+Uso: sudo bash setup.sh [opciones]
+
+Opciones:
+  --verify              Modo doctor: chequea servicios y reporta estado.
+  --purge-state         Borra /var/lib/setup-estudiante/ (markers + passwords).
+  --skip-wordpress      Saltea la instalación de WordPress.
+  --only=mod1,mod2      Ejecuta solo los módulos indicados (fuerza re-ejecución
+                        borrando sus markers). Excluyente con --skip-*.
+  -h, --help            Esta ayuda.
+
+Módulos disponibles:
+  system apache-php mariadb phpmyadmin nodejs vscode
+  tools-cli chrome wordpress tuning welcome-page credentials
+HELP
             exit 0
             ;;
-        *) warn "Flag desconocido: $arg" ;;
+        *) err "Flag desconocido: $arg" ;;
     esac
 done
+
+# --- Validación de combinaciones de flags ---
+if [[ -n "$ONLY_MODULES" && "$FLAG_SKIP_WORDPRESS" == true ]]; then
+    err "--only y --skip-wordpress son mutuamente excluyentes."
+fi
 
 # ---------------------------------------------------------------------------
 # Validaciones iniciales
@@ -48,6 +70,20 @@ done
 require_root
 require_debian
 detect_real_user
+
+# ---------------------------------------------------------------------------
+# --purge-state: borrar markers + passwords y salir
+# ---------------------------------------------------------------------------
+if [[ "$FLAG_PURGE_STATE" == true ]]; then
+    if [[ -d "$STATE_DIR" ]]; then
+        warn "Borrando $STATE_DIR (markers + passwords)..."
+        rm -rf "$STATE_DIR"
+        ok "Estado purgado. Próxima ejecución generará nuevos passwords."
+    else
+        info "No hay estado previo en $STATE_DIR."
+    fi
+    exit 0
+fi
 
 info "Log: $LOG_FILE"
 info "Usuario: $REAL_USER (home: $REAL_HOME)"
@@ -115,6 +151,15 @@ run_module() {
 }
 
 # --- Módulos en orden ---
+
+# Si --only=X, borrar markers de esos módulos para forzar re-ejecución.
+if [[ -n "$ONLY_MODULES" ]]; then
+    info "Modo --only: forzando re-ejecución de módulos seleccionados."
+    while IFS= read -r mod; do
+        # Cada módulo puede tener varios markers internos; los borramos por prefijo.
+        find "$STATE_DIR" -maxdepth 1 -name "${mod}*.done" -delete 2>/dev/null || true
+    done < <(echo "$ONLY_MODULES" | tr ',' '\n')
+fi
 
 should_run system      && run_module system
 should_run apache-php  && run_module apache-php
