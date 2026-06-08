@@ -177,3 +177,9 @@ utilidades-3ds/
 |---|---|
 | v1 (monolítico) | Script único, sin idempotencia. En `archivo-historico/`. |
 | v2 (actual) | Modular, idempotente, con modo verify/doctor. |
+
+---
+
+## Licencia
+
+MIT — ver [LICENSE](LICENSE).
