@@ -163,7 +163,7 @@ should_run() {
 }
 
 run_module() {
-    local mod="$1"
+    local mod="$1" current="$2" total="$3"
     local file="$LIB_DIR/${mod}.sh"
     [[ -f "$file" ]] || err "Módulo no encontrado: $file"
     # shellcheck source=/dev/null
@@ -171,36 +171,40 @@ run_module() {
     # Convertir guiones a underscores para el nombre de la función pública.
     local func="setup_${mod//-/_}"
     declare -f "$func" >/dev/null || err "Módulo '$mod' no define $func()"
+    echo ""
+    echo -e "${CYAN}┌─ Módulo ${current}/${total}: ${mod} ─────────────────────────────────────────${NC}"
     "$func"
+    echo -e "${CYAN}└─ Módulo ${current}/${total}: ${mod} completado${NC}"
 }
 
-# --- Módulos en orden ---
+# --- Lista de módulos a ejecutar (se construye primero para saber el total) ---
+
+ALL_MODULES=(system apache-php mariadb phpmyadmin nodejs vscode tools-cli chrome)
+[[ "$FLAG_SKIP_WORDPRESS" == false ]] && ALL_MODULES+=(wordpress)
+ALL_MODULES+=(tuning welcome-page credentials)
+
+# Filtrar por --only si aplica
+MODULES_TO_RUN=()
+for mod in "${ALL_MODULES[@]}"; do
+    should_run "$mod" && MODULES_TO_RUN+=("$mod")
+done
+
+TOTAL=${#MODULES_TO_RUN[@]}
 
 # Si --only=X, borrar markers de esos módulos para forzar re-ejecución.
 if [[ -n "$ONLY_MODULES" ]]; then
     info "Modo --only: forzando re-ejecución de módulos seleccionados."
     while IFS= read -r mod; do
-        # Cada módulo puede tener varios markers internos; los borramos por prefijo.
         find "$STATE_DIR" -maxdepth 1 -name "${mod}*.done" -delete 2>/dev/null || true
     done < <(echo "$ONLY_MODULES" | tr ',' '\n')
 fi
 
-should_run system      && run_module system
-should_run apache-php  && run_module apache-php
-should_run mariadb     && run_module mariadb
-should_run phpmyadmin  && run_module phpmyadmin
-should_run nodejs      && run_module nodejs
-should_run vscode      && run_module vscode
-should_run tools-cli   && run_module tools-cli
-should_run chrome      && run_module chrome
-
-if [[ "$FLAG_SKIP_WORDPRESS" == false ]]; then
-    should_run wordpress   && run_module wordpress
-fi
-
-should_run tuning      && run_module tuning
-should_run welcome-page && run_module welcome-page
-should_run credentials && run_module credentials
+# Ejecutar módulos con contador de progreso
+CURRENT=0
+for mod in "${MODULES_TO_RUN[@]}"; do
+    CURRENT=$((CURRENT + 1))
+    run_module "$mod" "$CURRENT" "$TOTAL"
+done
 
 # ---------------------------------------------------------------------------
 # Limpieza final
