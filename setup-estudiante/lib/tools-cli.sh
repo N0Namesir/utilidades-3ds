@@ -155,6 +155,12 @@ _tools_fonts() {
     ok "Fuentes instaladas (Fira Code, JetBrains Mono)"
 }
 
+_tools_filezilla() {
+    info "Instalando FileZilla..."
+    apt_install filezilla
+    ok "FileZilla instalado"
+}
+
 setup_tools_cli() {
     run_step "tools-cli-tilix"        _tools_tilix
     run_step "tools-cli-micro"        _tools_micro
@@ -165,11 +171,12 @@ setup_tools_cli() {
     run_step "tools-cli-mkcert"       _tools_mkcert_install
     run_step "tools-cli-gh"           _tools_gh
     run_step "tools-cli-fonts"        _tools_fonts
+    run_step "tools-cli-filezilla"    _tools_filezilla
 }
 
 verify_tools_cli() {
     local bins=(tilix micro composer jq tree ncdu rg fdfind batcat fzf tldr
-                mkcert http gh)
+                mkcert http gh filezilla)
     for bin in "${bins[@]}"; do
         verify_check "$bin en PATH" "command -v $bin" \
             "sudo bash setup.sh --only=tools-cli"
