@@ -168,6 +168,7 @@ utilidades-3ds/
 └── archivo-historico/
     └── setup-estudiante-v1.sh   ← versión monolítica original (referencia)
 ```
+<img width="984" height="515" alt="image" src="https://github.com/user-attachments/assets/3b07534e-ec0c-414e-abe8-5af7ad04a9ef" />
 
 ---
 
