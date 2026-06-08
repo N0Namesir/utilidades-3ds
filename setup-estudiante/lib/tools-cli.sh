@@ -76,6 +76,7 @@ _tools_composer() {
         warn "No se pudo verificar el checksum (composer.github.io no disponible). Instalando de todos modos."
     fi
 
+    info "Descargando composer.phar (puede tardar unos segundos)..."
     php "$tmp/composer-setup.php" --install-dir=/usr/local/bin --filename=composer --quiet
     rm -rf "$tmp"
     ok "Composer $(composer --version --no-ansi 2>/dev/null | head -n1)"
@@ -113,14 +114,20 @@ _tools_fd_bat_symlinks() {
 }
 
 _tools_mkcert_install() {
-    # mkcert -install registra el CA local en el trust store del sistema y
-    # en NSS (Firefox/Chrome). Sin este paso los certificados son válidos
-    # pero los navegadores los marcan como no confiables.
-    # Se corre como REAL_USER: mkcert gestiona internamente la parte que
-    # requiere permisos elevados. Idempotente: si ya está instalado, sale 0.
+    # mkcert -install registra la CA local en el trust store del sistema y
+    # en NSS (Firefox/Chrome). Sin este paso los certificados son técnicamente
+    # válidos pero los navegadores los marcan como "No seguro".
+    #
+    # Se corre como root (ya lo somos) con CAROOT apuntando al directorio del
+    # usuario real, para que la CA quede en su home y no en /root.
+    # Así mkcert no necesita llamar a sudo internamente — lo que causaba el
+    # prompt de contraseña al correr como REAL_USER.
     info "Registrando CA local de mkcert..."
-    sudo -u "$REAL_USER" mkcert -install
-    ok "CA de mkcert instalado en el trust store"
+    local caroot="$REAL_HOME/.local/share/mkcert"
+    mkdir -p "$caroot"
+    CAROOT="$caroot" mkcert -install
+    chown -R "$REAL_USER:$REAL_USER" "$caroot"
+    ok "CA de mkcert instalada en el trust store (CAROOT: $caroot)"
 }
 
 # ---------------------------------------------------------------------------
@@ -148,6 +155,12 @@ _tools_fonts() {
     ok "Fuentes instaladas (Fira Code, JetBrains Mono)"
 }
 
+_tools_filezilla() {
+    info "Instalando FileZilla..."
+    apt_install filezilla
+    ok "FileZilla instalado"
+}
+
 setup_tools_cli() {
     run_step "tools-cli-tilix"        _tools_tilix
     run_step "tools-cli-micro"        _tools_micro
@@ -158,11 +171,12 @@ setup_tools_cli() {
     run_step "tools-cli-mkcert"       _tools_mkcert_install
     run_step "tools-cli-gh"           _tools_gh
     run_step "tools-cli-fonts"        _tools_fonts
+    run_step "tools-cli-filezilla"    _tools_filezilla
 }
 
 verify_tools_cli() {
     local bins=(tilix micro composer jq tree ncdu rg fdfind batcat fzf tldr
-                mkcert http gh)
+                mkcert http gh filezilla)
     for bin in "${bins[@]}"; do
         verify_check "$bin en PATH" "command -v $bin" \
             "sudo bash setup.sh --only=tools-cli"
