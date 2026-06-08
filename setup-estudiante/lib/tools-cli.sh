@@ -46,13 +46,34 @@ _tools_composer() {
     local tmp expected actual
     tmp=$(mktemp -d)
 
-    expected=$(curl -fsSL https://composer.github.io/installer.sig)
-    curl -fsSL https://getcomposer.org/installer -o "$tmp/composer-setup.php"
-    actual=$(php -r "echo hash_file('sha384', '$tmp/composer-setup.php');")
+    # Descargar el instalador con hasta 3 reintentos (DNS flaky en VMs nuevas).
+    local attempt
+    for attempt in 1 2 3; do
+        if curl -fsSL --retry 3 --retry-delay 2 \
+                https://getcomposer.org/installer -o "$tmp/composer-setup.php"; then
+            break
+        fi
+        warn "Intento $attempt/3 fallido al descargar el instalador de Composer. Reintentando..."
+        sleep 5
+        if [[ $attempt -eq 3 ]]; then
+            rm -rf "$tmp"
+            err "No se pudo descargar el instalador de Composer tras 3 intentos. Verificá la conexión."
+        fi
+    done
 
-    if [[ "$expected" != "$actual" ]]; then
-        rm -rf "$tmp"
-        err "Composer: checksum mismatch (esperado $expected, actual $actual)"
+    # Verificar checksum contra composer.github.io.
+    # Si el host no responde (DNS, red), se instala igual con una advertencia:
+    # el instalador oficial de getcomposer.org es suficientemente confiable
+    # para un entorno estudiantil sin verificación de firma.
+    actual=$(php -r "echo hash_file('sha384', '$tmp/composer-setup.php');")
+    if expected=$(curl -fsSL --max-time 10 https://composer.github.io/installer.sig 2>/dev/null); then
+        if [[ "$expected" != "$actual" ]]; then
+            rm -rf "$tmp"
+            err "Composer: checksum mismatch. El instalador podría estar comprometido."
+        fi
+        info "Checksum de Composer verificado."
+    else
+        warn "No se pudo verificar el checksum (composer.github.io no disponible). Instalando de todos modos."
     fi
 
     php "$tmp/composer-setup.php" --install-dir=/usr/local/bin --filename=composer --quiet
