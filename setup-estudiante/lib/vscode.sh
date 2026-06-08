@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# lib/vscode.sh — VS Code (repo oficial Microsoft).
+
+_vscode_repo() {
+    step "Repositorio VS Code"
+    # Fix bug #2: el directorio /etc/apt/keyrings no siempre existe en
+    # instalaciones frescas de Lubuntu 24.04.
+    mkdir -p /etc/apt/keyrings
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc \
+        | gpg --dearmor > /etc/apt/keyrings/microsoft.gpg
+    chmod a+r /etc/apt/keyrings/microsoft.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
+        | tee /etc/apt/sources.list.d/vscode.list > /dev/null
+    apt update
+    ok "Repo VS Code agregado"
+}
+
+_vscode_install() {
+    info "Instalando VS Code..."
+    apt_install code
+    ok "VS Code instalado"
+}
+
+_vscode_extensions() {
+    info "Instalando extensiones de VS Code para $REAL_USER..."
+    # `code --install-extension` es idempotente: dice "already installed"
+    # y retorna 0 si la extensión ya está. Se corre como REAL_USER para que
+    # las extensiones queden en ~/.vscode/extensions del usuario, no de root.
+    local extensions=(
+        bmewburn.vscode-intelephense-client
+        esbenp.prettier-vscode
+        dbaeumer.vscode-eslint
+        eamodio.gitlens
+        ritwickdey.LiveServer
+        usernamehw.errorlens
+    )
+    for ext in "${extensions[@]}"; do
+        sudo -u "$REAL_USER" code --install-extension "$ext" --force
+    done
+    ok "Extensiones VS Code instaladas (${#extensions[@]})"
+}
+
+setup_vscode() {
+    run_step "vscode-repo"       _vscode_repo
+    run_step "vscode-install"    _vscode_install
+    run_step "vscode-extensions" _vscode_extensions
+}
+
+verify_vscode() {
+    verify_check "code en PATH" "command -v code" "sudo bash setup.sh --only=vscode"
+    verify_check_warn "extensión intelephense instalada" \
+        "sudo -u '$REAL_USER' code --list-extensions 2>/dev/null | grep -q bmewburn.vscode-intelephense-client" \
+        "sudo bash setup.sh --only=vscode"
+    verify_check_warn "extensión prettier instalada" \
+        "sudo -u '$REAL_USER' code --list-extensions 2>/dev/null | grep -q esbenp.prettier-vscode" \
+        "sudo bash setup.sh --only=vscode"
+}
+
