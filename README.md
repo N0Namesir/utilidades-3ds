@@ -11,9 +11,9 @@ Un solo script deja la máquina lista para trabajar:
 
 | Herramienta | Versión |
 |---|---|
-| Apache 2 | última del repo oficial |
-| PHP | última del repo oficial |
-| MariaDB | última del repo oficial |
+| Apache 2 | última de los repos de Ubuntu |
+| PHP | última de los repos de Ubuntu |
+| MariaDB | última de los repos de Ubuntu |
 | phpMyAdmin + Adminer | última estable |
 | WordPress | última estable |
 | Node.js | 22 LTS (NodeSource) |
@@ -23,7 +23,7 @@ Un solo script deja la máquina lista para trabajar:
 | Google Chrome Dev | canal unstable |
 | Tilix | terminal con paneles |
 | Micro | editor de texto de terminal |
-| Git | última del repo oficial |
+| Git | última de los repos de Ubuntu |
 | Composer | última estable (verificado con sha384) |
 | jq, tree, ncdu, ripgrep, fd, bat, fzf, tldr | herramientas de terminal |
 | HTTPie (`http`) | cliente HTTP de terminal |
@@ -54,7 +54,7 @@ Un solo script deja la máquina lista para trabajar:
 git clone https://github.com/N0Namesir/utilidades-3ds.git
 cd utilidades-3ds
 
-# Instalación completa
+# Instalación completa (15–30 min según la conexión)
 sudo bash setup-estudiante/setup.sh
 
 # Sin WordPress (si no se necesita)
