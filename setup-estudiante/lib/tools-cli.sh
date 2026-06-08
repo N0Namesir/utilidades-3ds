@@ -76,7 +76,8 @@ _tools_composer() {
         warn "No se pudo verificar el checksum (composer.github.io no disponible). Instalando de todos modos."
     fi
 
-    php "$tmp/composer-setup.php" --install-dir=/usr/local/bin --filename=composer --quiet
+    info "Descargando composer.phar (puede tardar unos segundos)..."
+    php "$tmp/composer-setup.php" --install-dir=/usr/local/bin --filename=composer
     rm -rf "$tmp"
     ok "Composer $(composer --version --no-ansi 2>/dev/null | head -n1)"
 }
