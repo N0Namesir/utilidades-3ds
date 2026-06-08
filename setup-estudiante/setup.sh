@@ -124,16 +124,66 @@ if [[ "$FLAG_VERIFY" == true ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Generación de passwords aleatorios (una sola vez)
+# Generación / elección de passwords (una sola vez)
 # ---------------------------------------------------------------------------
+
+# Pide una password al usuario con confirmación. Si el usuario deja el campo
+# vacío o la confirmación no coincide tras 3 intentos, devuelve una aleatoria.
+# Lee siempre desde /dev/tty para no consumir stdin del script principal.
+_prompt_password() {
+    local label="$1"
+    local pass confirm
+    local -i _tries=3
+    while (( _tries-- > 0 )); do
+        IFS= read -r -s -p "  $label (Enter para aleatoria): " pass < /dev/tty
+        echo "" > /dev/tty
+        if [[ -z "$pass" ]]; then
+            printf '%s' "$(gen_password)"
+            return 0
+        fi
+        if [[ ${#pass} -lt 8 ]]; then
+            echo "  Mínimo 8 caracteres. Intentá de nuevo." > /dev/tty
+            continue
+        fi
+        IFS= read -r -s -p "  Confirmá $label: " confirm < /dev/tty
+        echo "" > /dev/tty
+        if [[ "$pass" == "$confirm" ]]; then
+            printf '%s' "$pass"
+            return 0
+        fi
+        echo "  Las contraseñas no coinciden. Intentá de nuevo." > /dev/tty
+    done
+    # Tras 3 fallos usar aleatoria
+    warn "Demasiados intentos fallidos para '$label'. Usando contraseña aleatoria." > /dev/tty
+    printf '%s' "$(gen_password)"
+}
+
 if [[ -f "$STATE_DIR/passwords.env" ]]; then
     warn "Usando passwords generados en ejecución anterior."
     # shellcheck source=/dev/null
     source "$STATE_DIR/passwords.env"
 else
-    MARIADB_ROOT_PASSWORD=$(gen_password)
-    PHPMYADMIN_PASSWORD=$(gen_password)
-    USER_DB_PASSWORD=$(gen_password)
+    # Ofrecer elección manual solo si hay TTY interactivo.
+    if [[ -t 0 ]]; then
+        echo "" > /dev/tty
+        echo "  ┌──────────────────────────────────────────────────────┐" > /dev/tty
+        echo "  │  Configuración de contraseñas                        │" > /dev/tty
+        echo "  │  Podés elegir tus contraseñas o dejar que el script  │" > /dev/tty
+        echo "  │  genere unas seguras automáticamente.                │" > /dev/tty
+        echo "  │  (Mín. 8 caracteres. Enter = contraseña aleatoria)   │" > /dev/tty
+        echo "  └──────────────────────────────────────────────────────┘" > /dev/tty
+        echo "" > /dev/tty
+        MARIADB_ROOT_PASSWORD=$(_prompt_password "Contraseña root de MariaDB")
+        PHPMYADMIN_PASSWORD=$(_prompt_password "Contraseña de phpMyAdmin")
+        USER_DB_PASSWORD=$(_prompt_password "Contraseña de bases de datos del usuario")
+        echo "" > /dev/tty
+    else
+        warn "Sin TTY: generando contraseñas aleatorias automáticamente."
+        MARIADB_ROOT_PASSWORD=$(gen_password)
+        PHPMYADMIN_PASSWORD=$(gen_password)
+        USER_DB_PASSWORD=$(gen_password)
+    fi
+
     mkdir -p "$STATE_DIR"
     chmod 700 "$STATE_DIR"
     cat > "$STATE_DIR/passwords.env" << EOF
@@ -142,7 +192,7 @@ PHPMYADMIN_PASSWORD=${PHPMYADMIN_PASSWORD}
 USER_DB_PASSWORD=${USER_DB_PASSWORD}
 EOF
     chmod 600 "$STATE_DIR/passwords.env"
-    ok "Passwords generados y guardados en $STATE_DIR/passwords.env"
+    ok "Passwords guardados en $STATE_DIR/passwords.env"
 fi
 
 export MARIADB_ROOT_PASSWORD PHPMYADMIN_PASSWORD USER_DB_PASSWORD
