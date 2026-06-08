@@ -77,7 +77,7 @@ _tools_composer() {
     fi
 
     info "Descargando composer.phar (puede tardar unos segundos)..."
-    php "$tmp/composer-setup.php" --install-dir=/usr/local/bin --filename=composer
+    php "$tmp/composer-setup.php" --install-dir=/usr/local/bin --filename=composer --quiet
     rm -rf "$tmp"
     ok "Composer $(composer --version --no-ansi 2>/dev/null | head -n1)"
 }
