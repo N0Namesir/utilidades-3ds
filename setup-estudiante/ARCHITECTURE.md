@@ -111,7 +111,38 @@ no deja marker, por lo que el re-run lo reintenta completo.
 
 ---
 
-## 5. Flujo del orquestador (setup.sh)
+## 5. Helpers de common.sh
+
+Todos los módulos sourcéan `common.sh` a través del orquestador. Las funciones
+disponibles sin importación adicional son:
+
+| Función | Firma | Propósito |
+|---|---|---|
+| `step` | `step "Título"` | Imprime encabezado de sección (cyan) |
+| `ok` | `ok "mensaje"` | Imprime resultado exitoso (verde) |
+| `info` | `info "mensaje"` | Imprime información de progreso (azul) |
+| `warn` | `warn "mensaje"` | Imprime advertencia (amarillo) |
+| `err` | `err "mensaje"` | Imprime error y hace `exit 1` (rojo) |
+| `run_step` | `run_step <marker> <func> [args]` | Ejecuta función con idempotencia por marker |
+| `step_done` | `step_done <marker>` | Retorna 0 si el marker existe |
+| `mark_done` | `mark_done <marker>` | Crea el marker en STATE_DIR |
+| `clear_marker` | `clear_marker <marker>` | Borra el marker (fuerza re-run) |
+| `apt_install` | `apt_install pkg1 pkg2 ...` | `apt install -y` con DEBIAN_FRONTEND=noninteractive |
+| `run_sql` | `run_sql <<'SQL' ... SQL` | Ejecuta heredoc SQL con autenticación root |
+| `gen_password` | `gen_password` | Genera password alfanumérico de 16 chars |
+| `gen_password_complex` | `gen_password_complex` | Genera password con 4 clases de chars (SQL Server) |
+| `backup_webroot` | `backup_webroot` | Backup diario de `/var/www/html` (idempotente: uno por día) |
+| `require_root` | `require_root` | Aborta si no se corre con EUID=0 |
+| `require_debian` | `require_debian` | Aborta si no es Ubuntu o Debian |
+| `detect_real_user` | `detect_real_user` | Exporta `REAL_USER` y `REAL_HOME` |
+| `assert_service_active` | `assert_service_active <svc>` | Aborta si el servicio no está activo |
+| `require_cmd` | `require_cmd <cmd>` | Aborta si el comando no está en PATH |
+| `verify_check` | `verify_check <desc> <cmd> [fix]` | Check de verify: falla = FAIL |
+| `verify_check_warn` | `verify_check_warn <desc> <cmd> [fix]` | Check de verify: falla = WARN |
+
+---
+
+## 6. Flujo del orquestador (setup.sh)
 
 ```
 [inicio]
@@ -150,7 +181,7 @@ al terminal del operador, esquivando el tee. El log queda limpio de secretos.
 
 ---
 
-## 6. Contraseñas y secretos
+## 7. Contraseñas y secretos
 
 ### Generación
 
@@ -189,7 +220,7 @@ En re-runs, `setup.sh` sourcéa `passwords.env` y exporta las variables.
 
 ---
 
-## 7. Modo doctor (--verify)
+## 8. Modo doctor (--verify)
 
 Cada módulo expone `verify_<modulo>()` con checks usando dos helpers:
 
@@ -217,7 +248,7 @@ comando exacto para reparar.
 
 ---
 
-## 8. Convenciones de nombres
+## 9. Convenciones de nombres
 
 | Concepto | Convención | Ejemplo |
 |---|---|---|
@@ -234,7 +265,7 @@ nombres de función bash no pueden.
 
 ---
 
-## 9. Variables de entorno de contexto
+## 10. Variables de entorno de contexto
 
 Exportadas por `detect_real_user()` y disponibles en todos los módulos:
 
@@ -253,7 +284,7 @@ Exportadas por `detect_real_user()` y disponibles en todos los módulos:
 
 ---
 
-## 10. Particularidades del stack en Ubuntu 24.04
+## 11. Particularidades del stack en Ubuntu 24.04
 
 Estas diferencias respecto a nombres "esperados" quemaron tiempo de debugging:
 
@@ -269,11 +300,16 @@ Estas diferencias respecto a nombres "esperados" quemaron tiempo de debugging:
 
 En Ubuntu/Debian, `root@localhost` en MariaDB usa el plugin `unix_socket` por
 defecto. `sudo mysql` autentica por UID sin contraseña. `_mariadb_secure()` usa
-`sudo mysql` para configurar los usuarios; los módulos posteriores usan
-`mysql -u root -p"$MARIADB_ROOT_PASSWORD"` (password auth) porque ya se
-configuró `mysql_native_password` para root en ese paso. Si se re-ejecuta
-`_mariadb_secure()`, el `ALTER USER … BY '...'` es idempotente porque
-`$MARIADB_ROOT_PASSWORD` persiste en `passwords.env`.
+`sudo mysql` para los comandos iniciales; los módulos posteriores usan
+`mysql -u root -p"$MARIADB_ROOT_PASSWORD"` para conectarse con password.
+
+En MariaDB 10.4+ (Ubuntu 24.04 trae 10.11), el `ALTER USER 'root'@'localhost'
+IDENTIFIED BY '...'` — la forma simple, que es la que usa `_mariadb_secure()` —
+**añade** un password sin sustituir el plugin `unix_socket`. Resultado: ambos
+métodos de autenticación quedan disponibles simultáneamente para `root@localhost`:
+socket auth (vía `sudo mysql`) y password auth (vía `-p`). Si se re-ejecuta
+`_mariadb_secure()`, el `ALTER USER` es idempotente porque `$MARIADB_ROOT_PASSWORD`
+persiste en `passwords.env` y el valor no cambia entre runs.
 
 ### Node.js y el PATH del usuario
 
@@ -295,7 +331,7 @@ local path_line='export PATH="$HOME/.npm-global/bin:$PATH"'
 
 ---
 
-## 11. SQL Server (opcional, Podman)
+## 12. SQL Server (opcional, Podman)
 
 `scripts/sqlserver-up.sh` gestiona un contenedor `mssql/server:2022-latest`.
 
@@ -308,9 +344,17 @@ Estados posibles del contenedor (detección con `podman ps -a --filter`):
 Loop de readiness (90 s máx):
 
 ```bash
-until sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" &>/dev/null; do
+deadline=$((SECONDS + 90))
+while (( SECONDS < deadline )); do
+    if podman exec "$CONTAINER" \
+        /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa \
+        -P "$SA_PASSWORD" -Q 'SELECT 1' &>/dev/null; then
+        ok "SQL Server listo."
+        break
+    fi
     sleep 3
 done
+(( SECONDS >= deadline )) && err "SQL Server no respondió en 90s. Revisá: podman logs $CONTAINER"
 ```
 
 `-C` (trust server certificate) es necesario con `tools-18` de sqlcmd contra
@@ -325,7 +369,7 @@ genere una nueva contraseña.
 
 ---
 
-## 12. Tuning de RAM (4 GB)
+## 13. Tuning de RAM (4 GB)
 
 ```
 zram: ALGO=zstd, PERCENT=50
@@ -349,7 +393,7 @@ earlyoom: -m 15,10 -s 15,10
 
 ---
 
-## 13. Flags de setup.sh
+## 14. Flags de setup.sh
 
 | Flag | Efecto |
 |---|---|
@@ -365,7 +409,7 @@ earlyoom: -m 15,10 -s 15,10
 
 ---
 
-## 14. Seguridad en capas
+## 15. Seguridad en capas
 
 | Capa | Medida |
 |---|---|
@@ -373,12 +417,12 @@ earlyoom: -m 15,10 -s 15,10
 | Contraseñas en log | Ninguna: las credenciales se muestran via `/dev/tty`, nunca stdout |
 | passwords.env | 600 root:root en STATE_DIR (700) |
 | credenciales-instalacion.txt | 600 owner=REAL_USER |
-| gitignore global | `credenciales-instalacion.txt`, `*.env`, `.env.local` agregados por el instalador |
+| gitignore global | `credenciales-instalacion.txt`, `*.env`, `.env.local`, `.env.*.local` agregados por el instalador |
 | Página web | Sin contraseñas hardcodeadas; estado de servicios via `systemctl is-active` |
 
 ---
 
-## 15. Cómo agregar un módulo nuevo
+## 16. Cómo agregar un módulo nuevo
 
 1. Crear `lib/mi-modulo.sh`:
 
