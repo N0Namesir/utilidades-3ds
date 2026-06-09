@@ -28,7 +28,7 @@ _nodejs_user_prefix() {
     if ! grep -qF "$path_line" "$profile" 2>/dev/null; then
         {
             echo ""
-            echo "# npm globals sin sudo (setup-estudiante)"
+            echo "# npm globals sin sudo (setup-estudiante-arch)"
             echo "$path_line"
         } >> "$profile"
         chown "$REAL_USER:$REAL_USER" "$profile"

@@ -180,14 +180,6 @@ verify_tools_cli() {
         "pacman -Qi tilix &>/dev/null" \
         "sudo bash setup.sh --only=tools-cli"
 
-    # En Arch no hay symlinks; fd y bat son binarios nativos
-    verify_check "fd es binario nativo (no symlink requerido)" \
-        "command -v fd" \
-        "sudo pacman -S --noconfirm --needed fd"
-    verify_check "bat es binario nativo (no symlink requerido)" \
-        "command -v bat" \
-        "sudo pacman -S --noconfirm --needed bat"
-
     # mkcert CA
     verify_check "CA mkcert registrada" \
         "[[ -f \"\$(sudo -u '$REAL_USER' mkcert -CAROOT 2>/dev/null)/rootCA.pem\" ]]" \
